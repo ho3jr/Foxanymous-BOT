@@ -14,9 +14,11 @@ from cryptography.hazmat.primitives import padding
 
 
 
-api_id = 111111111
-api_hash = ""
-token= ""
+
+api_id = 11111111
+api_hash = " "
+token= " "
+link = "https://telegram.me/FoxanymousBOT?start="
 
 app = Client(       #connect to bot
     "nashenas_bot",
@@ -47,17 +49,14 @@ db.execute(
 )
 
 
-
-link = "https://telegram.me/ho3jrbot?start="
-
-
 button1 = KeyboardButton("لینک من")
-button2 = KeyboardButton("به مخاطب خاصم وصلم کن")
+button2 = KeyboardButton("به‌مخاطب‌خاصم‌وصلم‌کن")
 button3 = KeyboardButton("راهنما")
-button4 = KeyboardButton("سورس ربات | درباره ربات")
+button4 = KeyboardButton("سورس‌ربات | درباره‌ربات")
+button5 = KeyboardButton("چنل ")
     
 
-keyboard_start = ReplyKeyboardMarkup([[button1, button2], [button3, button4]], resize_keyboard=True)
+keyboard_start = ReplyKeyboardMarkup([[button1, button2], [button3, button4], [button5]], resize_keyboard=True)
 
 learn_how_to_recive_id_group = InlineKeyboardMarkup(
     [
@@ -65,6 +64,11 @@ learn_how_to_recive_id_group = InlineKeyboardMarkup(
     ]
 )
 
+channel_link_button = InlineKeyboardMarkup(
+    [
+        [InlineKeyboardButton("چنل", url="https://t.me/+1Epzafcu40Q1Njlk")]
+    ]
+)
 
 def generate_key_and_iv():      #generate key and iv
     key = os.urandom(32)  # کلید 32 بایتی برای AES-256
@@ -82,16 +86,26 @@ def encrypt_aes(plain_text, key, iv):       #encrypting by aes
 
 
 def decrypt_aes(cipher_text, key):      #decrypting
-    cipher_data = base64.b64decode(cipher_text)
-    iv = cipher_data[:16]
-    ct = cipher_data[16:]
+
+    # Decode the base64 encoded ciphertext
+    cipher_text_bytes = base64.b64decode(cipher_text)
+    
+    # Extract the IV and the actual ciphertext
+    iv = cipher_text_bytes[:16]  # Assuming AES block size is 16 bytes
+    actual_cipher_text = cipher_text_bytes[16:]
+
+    # Create a cipher object
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     decryptor = cipher.decryptor()
-    padded_plain_text = decryptor.update(ct) + decryptor.finalize()
+    
+    # Decrypt the data
+    padded_plain_text = decryptor.update(actual_cipher_text) + decryptor.finalize()
+    
+    # Unpad the data
     unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
     plain_text = unpadder.update(padded_plain_text) + unpadder.finalize()
+    
     return plain_text.decode('utf-8')
-
 key, iv = generate_key_and_iv()
 
 
@@ -170,6 +184,8 @@ async def PV_main(c: Client, m: Message):
     if m.text == "/start":      #start message
         await app.send_message(m.from_user.id,"به ربات فاکسانیموس خوش اومدی😘\nمیتوانید از دستور /help برای راهنمایی استفاده کنید.", reply_markup=keyboard_start, disable_web_page_preview=True)
 
+    if m.text == "چنل":
+         await app.send_message(m.from_user.id,"برای عضو شدن در چنل اصلی ربات جهت خبر دار شدن از اخبار و اپدیت های ربات بر روی دکمه زیر کلیک کنید.", reply_markup=channel_link_button)
 
     elif m.text == "/myinfo" or m.text == "لینک من":       #send user link 
         user_info = cursor.execute(
@@ -271,7 +287,7 @@ async def query_receiver(Client, call1):
 
 
     see_najva_part = data.split("/")[0]
-
+    decrypted_text = ""
     if see_najva_part == "see_najva":       
         unique_id = data.split("/")[1]
         cursor.execute("SELECT ecrypt_text, sender_id, receiver_id_username FROM najvas_msg WHERE unique_id=?", (unique_id,))
@@ -280,13 +296,11 @@ async def query_receiver(Client, call1):
             ciphertext = result[0]
             sender_id = int(result[1])
             receiver_id = result[2]
-            if receiver_id.isdigit():
-                receiver_id = int(receiver_id)
-            else:
-                receiver_id = str(receiver_id)
-            print(receiver_id)
+            receiver_id = "".join(receiver_id.split(" "))
+            receiver_id = str(receiver_id)
             decrypted_text = decrypt_aes(ciphertext, key)
-            if call1.from_user.id == sender_id or call1.from_user.username == receiver_id or call1.from_user.id == receiver_id:
+            receiver_id = ''.join(receiver_id.split(" "))
+            if call1.from_user.id == sender_id or call1.from_user.username == receiver_id or call1.from_user.id == int(receiver_id):
                 await app.answer_callback_query(call1.id, text=decrypted_text, show_alert=True)
 
             else:
@@ -306,6 +320,7 @@ def inline_query_handler(client, inline_query):
 
             sender_id = inline_query.from_user.id
             receiver_id_username = query.split("/")[1]
+            receiver_id_username = ''.join(receiver_id_username.split(" "))
 
             cipher_text = encrypt_aes(text, key, iv)
 
@@ -325,6 +340,7 @@ def inline_query_handler(client, inline_query):
                     InlineQueryResultArticle(
                         id=unique_id,  
                         title="همه چیز به نظر درسته",
+                        description= "برای ارسال کلیک کنید",
                         reply_markup=send_najva_btn,
                         input_message_content=InputTextMessageContent(
                             "این یک پیام نجوا برای کاربر زیر است:\n {}".format(link_pr)),
@@ -342,6 +358,7 @@ def inline_query_handler(client, inline_query):
                     InlineQueryResultArticle(
                         id=unique_id,  
                         title="همه چیز به نظر درسته",
+                        description= "برای ارسال کلیک کنید",
                         reply_markup=send_najva_btn,
                         input_message_content=InputTextMessageContent(
                             "این یک پیام نجوا برای کاربر زیر است:\n {}".format(link_pr)),
@@ -355,12 +372,20 @@ def inline_query_handler(client, inline_query):
             InlineQueryResultArticle(
                 id=1 ,
                 title="آموزش استفاده از بخش نجوا",
+                description= "پیام های در نجوا در دیتابیس ذخیره میشود اما بارمزنگاری پیشرفته AES! خیالتون راحت باشه",
                 input_message_content=InputTextMessageContent(
-                    "**برای استفاده از بخش نجوا** بعد از یوزرنیم ربات نام کاربری خود را بنویسید. سپس یک / گذاشته و یوزرنیم یا آیدی عددی کاربر مورد نظر را بنویسید. و در انتها دوباره / گذاشته و عبارت send را بنویسید."+"\n\nمثال:\n @robot text message is here / username(or ID) /send",
+                    "**برای استفاده از بخش نجوا** بعد از یوزرنیم ربات متن خود را بنویسید. سپس یک / گذاشته و یوزرنیم یا آیدی عددی کاربر مورد نظر را بنویسید. و در انتها دوباره / گذاشته و کلمه send را بنویسید.\nاگر ربات را در گروه ادمین کنید میتوانید با ریپلای زدن دستور`id` بر روی کاربر مورد نظر، آيدی او را ببینید."+"\n\nمثال:\n @robot text message is here / username(or ID) /send",
                 )
             )
         ]
 
         app.answer_inline_query(inline_query.id, najva_info)
+
+
+@app.on_message(filters.group)        #receive msg in Group
+async def GROUP_main(c: Client, m: Message):
+    if m.text == "id" or m.text =="Id" or m.text== "ID" and m.reply_to_message.from_user.id:
+        await app.send_message(m.chat.id,"آيدی کاربر: `{}`".format(m.reply_to_message.from_user.id),reply_to_message_id=m.id)
+        pass
 
 app.run()
