@@ -13,11 +13,9 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
 
 
-
-
-api_id = 11111111
-api_hash = " "
-token= " "
+api_id = 1111111
+api_hash = ""
+token= ""
 link = "https://telegram.me/FoxanymousBOT?start="
 
 app = Client(       #connect to bot
@@ -47,7 +45,7 @@ db.execute(
         receiver_id_username VARCHAR(20)
         )"""
 )
-
+db.commit()
 
 button1 = KeyboardButton("لینک من")
 button2 = KeyboardButton("به‌مخاطب‌خاصم‌وصلم‌کن")
@@ -198,7 +196,7 @@ async def PV_main(c: Client, m: Message):
     elif m.text == "/help" or m.text == "راهنما":       #help message
         await app.send_message(m.from_user.id, "**دستورات قابل استفاده در ربات:**\n\n/connect_to_user   وصل شدن به مخاطب\n/myinfo  دریافت لینک ناشناس\n/robot_source   سورس ربات\n")
 
-    elif m.text == "/connect_to_user" or m.text == "به مخاطب خاصم وصلم کن":
+    elif m.text == "/connect_to_user" or m.text =="به‌مخاطب‌خاصم‌وصلم‌کن":
         try:
             answer = await app.ask(int(m.from_user.id), "یوزرنیم مخاطب**(بدون @)** یا آیدی عددی مخاطب مورد نظر را ارسال کنید./cancel\n**◉ [Robot Source](https://github.com/ho3jr/)**", timeout=120, disable_web_page_preview=True, reply_markup=learn_how_to_recive_id_group)
 
@@ -228,7 +226,7 @@ async def PV_main(c: Client, m: Message):
             await app.send_message(m.from_user.id, "**کاربر ربات رو استارت نزده.** شاید بتونی لینک ناشناس خودتو بهش بدی تا ربات رو استارت بزنه؟\n/myinfo")
 
 
-    elif m.text == "سورس ربات | درباره ربات" or m.text =="/robot_source":       #send robot source
+    elif m.text == "سورس‌ربات | درباره‌ربات" or m.text =="/robot_source":       #send robot source
         await app.send_message(m.from_user.id, "ربات فاکسامینوس به صورت کاملا اوپن سورس منتشر شده است و تمام توسعه دهندگان و برنامه نویسان میتوانند از این ربات استفاده کنند و آن را توسعه بدهند. از ویژگی های این ربات، میتوان به **حفظ حریم خصوصی** افراد اشاره کرد. این ربات اطلاعات و پیام های کاربران در هیچ کجا ذخیره نمیکند و به هیچ وجه ادمین به پیام های شما دسترسی ندارد. \n**این ربات به زبان پایتون و با کتابخانه pyrogram نوشته شده است!**\n\nعلاقه مندان به توسعه و استفاده از سورس ربات میتوانند از لینک زیر عمل کنند:\n**◉ [Robot Source](https://github.com/ho3jr/Foxanymous-BOT)**\nسازنده ربات: https://t.me/NaGHiZam")
 
 
