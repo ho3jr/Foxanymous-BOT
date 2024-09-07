@@ -12,11 +12,14 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
 
+INFO = open('INFO.txt', 'r')
+lines = INFO.readlines()
 
-api_id = 1111111
-api_hash = ""
-token= ""
-link = "https://telegram.me/FoxanymousBOT?start="
+
+api_id = int(lines[1])
+api_hash = "".join(str(lines[4]).split("\n"))
+token= "".join(str(lines[7]).split("\n"))
+link = "".join(str(lines[10]).split("\n"))
 
 app = Client(       #connect to bot
     "nashenas_bot",
@@ -304,6 +307,8 @@ async def query_receiver(Client, call1):
             else:
                  await app.answer_callback_query(call1.id, text="این پیام برای شما نیست", show_alert=True)
 
+    if data == "see_help_najva":
+        await app.answer_callback_query(call1.id, text= "برای ارسال نجوا بعد از اطمینان از ادمین بودن ربات در گروه به صورت زیر عمل کنید:\n۱-نام کاربری ربات\n۲-یک فاصله\n۳-نوشتن پیام\n۴-ریپلای بر شخص مورد نظر\n۵-کلیک بر روی دکمه ارسال", show_alert=True)
 
 @app.on_inline_query()
 def inline_query_handler(client, inline_query):
@@ -311,68 +316,50 @@ def inline_query_handler(client, inline_query):
         send_btn = []
         query = inline_query.query
         text = query.split("/")[0]
-
-        last_slash = query.split("/")[2]
-        if last_slash == " send" or last_slash == "send":
-            unique_id = generate_unique_id()
-
-            sender_id = inline_query.from_user.id
-            receiver_id_username = query.split("/")[1]
-            receiver_id_username = ''.join(receiver_id_username.split(" "))
-
-            cipher_text = encrypt_aes(text, key, iv)
+        unique_id = generate_unique_id()
+        sender_id = inline_query.from_user.id
 
 
-            db.execute("""INSERT INTO najvas_msg(unique_id, ecrypt_text, sender_id, receiver_id_username) VALUES(?,?,?,?)""",(unique_id, cipher_text, sender_id, receiver_id_username))
-            db.commit()
-            send_najva_btn = InlineKeyboardMarkup(
-                [
-                    [InlineKeyboardButton("مشاهده نجوا", callback_data="see_najva/" + unique_id)],
-                ]
+        cipher_text = encrypt_aes(text, key, iv)
+
+        db.execute("""INSERT INTO najvas_msg(unique_id, ecrypt_text, sender_id, receiver_id_username) VALUES(?,?,?,?)""",(unique_id, cipher_text,sender_id, "None"))
+        db.commit()
+        send_najva_btn = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("مشاهده نجوا", callback_data="see_najva/" + unique_id)],
+            ]
+        )
+
+        btns = [
+            InlineQueryResultArticle(
+                id=1,
+                title="همه چیز به نظر درسته",
+                description= "برای ارسال کلیک کنید",
+                reply_markup=send_najva_btn,
+                input_message_content=InputTextMessageContent(
+                    "**نجوا با موفقیت ارسال شد!**"),
+                
+            ),InlineQueryResultArticle(
+                id=2 ,
+                title="آموزش استفاده از بخش نجوا",
+                description= "پیام های در نجوا در دیتابیس ذخیره میشود اما بارمزنگاری پیشرفته AES! خیالتون راحت باشه",
+                input_message_content=InputTextMessageContent(
+                    "برای ارسال نجوا بعد از اطمینان از ادمین بودن ربات در گروه به صورت زیر عمل کنید:\n۱-نام کاربری ربات\n۲-یک فاصله\n۳-نوشتن پیام\n۴-ریپلای بر شخص مورد نظر\n۵-کلیک بر روی دکمه ارسال\nمثال:\n@FoxanymousBOT message",
+                )
             )
-            if receiver_id_username.isdigit():
-                receiver_id_username = int(receiver_id_username)
+        ]
 
-                link_pr = "tg://user?id={}".format(receiver_id_username)
-                send_btn = [
-                    InlineQueryResultArticle(
-                        id=unique_id,  
-                        title="همه چیز به نظر درسته",
-                        description= "برای ارسال کلیک کنید",
-                        reply_markup=send_najva_btn,
-                        input_message_content=InputTextMessageContent(
-                            "این یک پیام نجوا برای کاربر زیر است:\n {}".format(link_pr)),
-                        
-                    )
-                ]
-                app.answer_inline_query(inline_query.id, send_btn)
-            else:
-                receiver_id_username = str(receiver_id_username)
-                receiver_id_username = ''.join(receiver_id_username.split(" "))
-                receiver_id_username = ''.join(receiver_id_username.split("@"))
 
-                link_pr = "@"+(receiver_id_username)
-                send_btn = [
-                    InlineQueryResultArticle(
-                        id=unique_id,  
-                        title="همه چیز به نظر درسته",
-                        description= "برای ارسال کلیک کنید",
-                        reply_markup=send_najva_btn,
-                        input_message_content=InputTextMessageContent(
-                            "این یک پیام نجوا برای کاربر زیر است:\n {}".format(link_pr)),
-                        
-                    )
-                ]
-                app.answer_inline_query(inline_query.id, send_btn)
+        app.answer_inline_query(inline_query.id, results=btns)
 
-    except:         #show result for najva
+    except :         #show result for najva
         najva_info = [
             InlineQueryResultArticle(
                 id=1 ,
                 title="آموزش استفاده از بخش نجوا",
                 description= "پیام های در نجوا در دیتابیس ذخیره میشود اما بارمزنگاری پیشرفته AES! خیالتون راحت باشه",
                 input_message_content=InputTextMessageContent(
-                    "**برای استفاده از بخش نجوا** بعد از یوزرنیم ربات متن خود را بنویسید. سپس یک / گذاشته و یوزرنیم یا آیدی عددی کاربر مورد نظر را بنویسید. و در انتها دوباره / گذاشته و کلمه send را بنویسید.\nاگر ربات را در گروه ادمین کنید میتوانید با ریپلای زدن دستور`id` بر روی کاربر مورد نظر، آيدی او را ببینید."+"\n\nمثال:\n @robot text message is here / username(or ID) /send",
+                    "برای ارسال نجوا بعد از اطمینان از ادمین بودن ربات در گروه به صورت زیر عمل کنید:\n۱-نام کاربری ربات\n۲-یک فاصله\n۳-نوشتن پیام\n۴-ریپلای بر شخص مورد نظر\n۵-کلیک بر روی دکمه ارسال\nمثال:\n@FoxanymousBOT message",
                 )
             )
         ]
@@ -382,8 +369,40 @@ def inline_query_handler(client, inline_query):
 
 @app.on_message(filters.group)        #receive msg in Group
 async def GROUP_main(c: Client, m: Message):
+    see_help_najva_btn = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("آموزش ارسال نجوا", callback_data="see_help_najva")],
+        ]
+    )
+
     if m.text == "id" or m.text =="Id" or m.text== "ID" and m.reply_to_message.from_user.id:
         await app.send_message(m.chat.id,"آيدی کاربر: `{}`".format(m.reply_to_message.from_user.id),reply_to_message_id=m.id)
         pass
+    
+    try:
+        if m.reply_to_message.from_user.id and m.via_bot.id == int(lines[13]):
+            unique_id = m.reply_markup.inline_keyboard[0][0].callback_data
+            unique_id = unique_id.split("/")[1]
 
+            see_najva_btn = InlineKeyboardMarkup(
+                    [
+                        [InlineKeyboardButton("مشاهده نجوا", callback_data="see_najva/" + unique_id)],
+                    ]
+                )
+            
+            db.execute(
+                "UPDATE najvas_msg SET receiver_id_username=? WHERE unique_id =? ",(m.reply_to_message.from_user.id,unique_id)
+                )
+            db.commit()
+
+            await app.edit_message_text(m.chat.id, m.id, "یک نجوا برای [{}](tg://user?id={})".format(m.reply_to_message.from_user.first_name, int(m.reply_to_message.from_user.id)), reply_markup= see_najva_btn)
+    except:
+        if m.text == "برای ارسال نجوا بعد از اطمینان از ادمین بودن ربات در گروه به صورت زیر عمل کنید:\n۱-نام کاربری ربات\n۲-یک فاصله\n۳-نوشتن پیام\n۴-ریپلای بر شخص مورد نظر\n۵-کلیک بر روی دکمه ارسال\nمثال:\n@FoxanymousBOT message":
+            pass
+        else:
+            try:
+                await app.edit_message_text(m.chat.id, m.id, "یک خطا رخ داد. **آموزش ارسال نجوا را ببینید**", reply_markup= see_help_najva_btn)
+            except:
+                pass
+INFO.close()
 app.run()

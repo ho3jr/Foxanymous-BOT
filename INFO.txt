@@ -1,0 +1,14 @@
+api_id=
+here
+
+api_hash=
+here
+
+token=
+here
+
+link bot=
+https://telegram.me/FoxanymousBOT?start=
+
+bot_id=
+here
