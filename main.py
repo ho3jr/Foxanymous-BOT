@@ -297,9 +297,25 @@ async def query_receiver(Client, call1):
 
 
 
-    see_najva_part = data.split("/")[0]
+    first_part = data.split("/")[0]
     decrypted_text = ""
-    if see_najva_part == "see_najva":       
+
+    if first_part == "delete_najva":
+        unique_id = data.split("/")[1]
+        cursor.execute("SELECT sender_id, chat_id, message_id FROM najvas_msg WHERE unique_id=?", (unique_id,))
+        result = cursor.fetchone()
+        if result:
+            sender_id = int(result[0])
+            chat_id = int(result[1])
+            message_id = int(result[2])
+            if sender_id == call1.from_user.id :
+                cursor.execute("DELETE FROM najvas_msg WHERE unique_id =?",(unique_id,))
+                db.commit()
+                await app.edit_message_text(chat_id, message_id, "✅**نجوا با موفقیت حذف شد!**")
+            else:
+                await app.answer_callback_query(call1.id, "🚫شما فرستنده نجوا نیستید!", show_alert=True)
+
+    if first_part == "see_najva":       
         unique_id = data.split("/")[1]
         cursor.execute("SELECT ecrypt_text, sender_id, receiver_id_username, chat_id, message_id, receiver_name FROM najvas_msg WHERE unique_id=?", (unique_id,))
         result = cursor.fetchone()
@@ -325,7 +341,8 @@ async def query_receiver(Client, call1):
             try:
                 see_najva_btn = InlineKeyboardMarkup(
                         [
-                            [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id)],
+                            [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                             InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
                         ]
                     )
                 try:
@@ -460,7 +477,8 @@ async def GROUP_main(c: Client, m: Message):
 
                 see_najva_btn = InlineKeyboardMarkup(
                         [
-                            [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id)],
+                            [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                             InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
                         ]
                     )
                 
@@ -481,7 +499,8 @@ async def GROUP_main(c: Client, m: Message):
                     if result:
                         see_najva_btn = InlineKeyboardMarkup(
                                 [
-                                    [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id)],
+                                    [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                                    InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
                                 ]
                             )
                         user = ""
@@ -528,7 +547,8 @@ async def GROUP_main(c: Client, m: Message):
                 if result:
                     see_najva_btn = InlineKeyboardMarkup(
                             [
-                                [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id)],
+                                [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                                InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
                             ]
                         )
                     user = ""
