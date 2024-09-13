@@ -259,7 +259,7 @@ async def query_receiver(Client, call1):
             try:
                 keyboard_for_send_reply = InlineKeyboardMarkup(
                     [
-                        [InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(user_info[3])+"_/"+str(user_info[2]))],
+                        [InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(user_info[3])+"_/"+str(user_info[2])+"_/"+str(answer.id))],
                     ]
                 )
                 await app.send_message(user_info[1], "📬پیام ناشناس داری عزیزم:")
@@ -525,7 +525,7 @@ async def GROUP_main(c: Client, m: Message):
                         await app.edit_message_text(m.chat.id, m.id, "❗️یک خطا رخ داد. **آموزش ارسال نجوا را ببینید**", reply_markup= see_help_najva_btn)
                 except:
                     pass
-        except KeyError:
+        except:
             pass
     except:
         if m.text == "برای ارسال نجوا بعد از اطمینان از ادمین بودن ربات در گروه به صورت زیر عمل کنید:\n۱-نام کاربری ربات\n۲-یک فاصله\n۳-نوشتن پیام\n۴-ریپلای بر شخص مورد نظر\n۵-کلیک بر روی دکمه ارسال\nمثال:\n@FoxanymousBOT message\n\nاستفاده از نجوا با یوزرنیم:\n@FoxanymousBOT message @username\n@FoxanymousBOT message @111111111":
