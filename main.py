@@ -132,7 +132,7 @@ async def PV_main(c: Client, m: Message):
     async def Sendـanـanonymousـmessage(m, user_info):
         if user_info[0] != int(m.from_user.id):
             try:
-                answer = await app.ask(int(m.from_user.id), "📤در حال ارسال پیام ناشناس به **{}** هستی. هر پیامی ارسال کنی به صورت کاملا محرمانه ارسال خواهد شد. /cancel \n **◉ [Robot Source](https://github.com/ho3jr/)**".format(user_info[1]),timeout=120, disable_web_page_preview=True)
+                answer = await app.ask(int(m.from_user.id), "📤در حال ارسال پیام ناشناس به **{}** هستی. هر پیامی ارسال کنی به صورت کاملا محرمانه ارسال خواهد شد. /cancel \n **◉ [Robot Source](https://github.com/ho3jr/)**".format(user_info[1]),timeout=120, disable_web_page_preview=True,  reply_markup=keyboard_start )
                 if answer :
                     if answer.text=="/cancel":
                         await app.send_message(answer.from_user.id, "**✅کنسل شد!**")
@@ -195,7 +195,7 @@ async def PV_main(c: Client, m: Message):
     if m.text == "/start":      #start message
         await app.send_message(m.from_user.id,"به ربات فاکسانیموس خوش اومدی😘\nمیتوانید از دستور /help برای راهنمایی استفاده کنید.", reply_markup=keyboard_start, disable_web_page_preview=True)
 
-    if m.text == "چنل":
+    elif m.text == "چنل":
          await app.send_message(m.from_user.id,"📢برای عضو شدن در چنل اصلی ربات جهت خبر دار شدن از اخبار و اپدیت های ربات بر روی دکمه زیر کلیک کنید.", reply_markup=channel_link_button)
 
     elif m.text == "/myinfo" or m.text == "لینک من":       #send user link 
@@ -249,6 +249,29 @@ async def PV_main(c: Client, m: Message):
         end_t = datetime.now()
         time_taken_s = (end_t - start_t).microseconds / 1000
         await app.send_message(m.chat.id,f"Ping Pong Speed\n{time_taken_s} milli-seconds")
+
+    elif m.text == "/db_info":
+        try:
+            number_of_user_nashenas = 0
+            number_of_user_najva = 0
+            if m.from_user.id == int(lines[16]):
+                nashenas_info = cursor.execute(
+                    "SELECT id_db FROM users ORDER BY id_db DESC LIMIT 1"  # چک کردن در پایگاه داده با نام کاربری
+                )
+                if nashenas_info:
+                    for i in nashenas_info:
+                        number_of_user_nashenas= i[0]
+
+
+                najva_info = cursor.execute(
+                    "SELECT id_db FROM najvas_msg ORDER BY id_db DESC LIMIT 1"  # چک کردن در پایگاه داده با نام کاربری
+                )
+                if najva_info:
+                    for i in najva_info:
+                        number_of_user_najva= i[0]
+                await app.send_message(int(lines[16]), "تعداد کاربران چت ناشناس: {}\nتعداد پیام های نجوا: {}".format(number_of_user_nashenas, number_of_user_najva))
+        except:
+            pass
 @app.on_callback_query()        #receive query
 async def query_receiver(Client, call1):
     
@@ -487,7 +510,7 @@ async def GROUP_main(c: Client, m: Message):
                     )
                 db.commit()
 
-                await app.edit_message_text(m.chat.id, m.id, "📬یک **نجوا** برای [{}](tg://user?id={})".format(m.reply_to_message.from_user.first_name, int(m.reply_to_message.from_user.id)), reply_markup= see_najva_btn)
+                await app.edit_message_text(m.chat.id, m.id, "📬یک **نجوا** برای [{}](tg://user?id={})".format(m.reply_to_message.from_user.first_name, int(m.reply_to_message.from_user.id)),c= see_najva_btn)
 
             elif m.via_bot.id == int(lines[13]):
                 unique_id = m.reply_markup.inline_keyboard[0][0].callback_data
@@ -523,9 +546,9 @@ async def GROUP_main(c: Client, m: Message):
                             await app.edit_message_text(m.chat.id, m.id, "❗️یک خطا رخ داد. **آموزش ارسال نجوا را ببینید**", reply_markup= see_help_najva_btn)
                     else:
                         await app.edit_message_text(m.chat.id, m.id, "❗️یک خطا رخ داد. **آموزش ارسال نجوا را ببینید**", reply_markup= see_help_najva_btn)
-                except:
+                except KeyError:
                     pass
-        except:
+        except KeyError:
             pass
     except:
         if m.text == "برای ارسال نجوا بعد از اطمینان از ادمین بودن ربات در گروه به صورت زیر عمل کنید:\n۱-نام کاربری ربات\n۲-یک فاصله\n۳-نوشتن پیام\n۴-ریپلای بر شخص مورد نظر\n۵-کلیک بر روی دکمه ارسال\nمثال:\n@FoxanymousBOT message\n\nاستفاده از نجوا با یوزرنیم:\n@FoxanymousBOT message @username\n@FoxanymousBOT message @111111111":
