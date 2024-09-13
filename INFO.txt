@@ -12,3 +12,6 @@ https://telegram.me/FoxanymousBOT?start=
 
 bot_id=
 here
+
+admin_id=
+here
