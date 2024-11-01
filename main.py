@@ -52,6 +52,21 @@ db.execute(
         message_id INTEGER
         )"""
 )
+
+cursor = db.cursor()
+db.execute(
+    """CREATE TABLE IF NOT EXISTS pv_msg(
+        id_db INTEGER PRIMARY KEY,
+        sender_name VARCHAR(30),
+        receiver_name VARCHAR(30),
+        unique_id VARCHAR(15),
+        ecrypt_text VARCHAR(1000),
+        sender_id INTEGER,
+        receiver_id VARCHAR(20),
+        answer_id INTEGER,
+        readed VARCHAR(6)
+        )"""
+)
 db.commit()
 
 button1 = KeyboardButton("لینک من")
@@ -59,9 +74,12 @@ button2 = KeyboardButton("به‌مخاطب‌خاصم‌وصلم‌کن")
 button3 = KeyboardButton("راهنما")
 button4 = KeyboardButton("سورس‌ربات | درباره‌ربات")
 button5 = KeyboardButton("چنل ")
+
+button6 = KeyboardButton("لغو کردن")
     
 
 keyboard_start = ReplyKeyboardMarkup([[button1, button2], [button3, button4], [button5]], resize_keyboard=True)
+keyboard_cancel = ReplyKeyboardMarkup([[button6]], resize_keyboard=True)
 
 see_help_najva_btn = InlineKeyboardMarkup(
     [
@@ -132,15 +150,24 @@ async def PV_main(c: Client, m: Message):
     async def Sendـanـanonymousـmessage(m, user_info):
         if user_info[0] != int(m.from_user.id):
             try:
-                answer = await app.ask(int(m.from_user.id), "📤در حال ارسال پیام ناشناس به **{}** هستی. هر پیامی ارسال کنی به صورت کاملا محرمانه ارسال خواهد شد. /cancel \n **◉ [Robot Source](https://github.com/ho3jr/)**".format(user_info[1]),timeout=120, disable_web_page_preview=True,  reply_markup=keyboard_start )
+                answer = await app.ask(int(m.from_user.id), "📤در حال ارسال پیام ناشناس به **{}** هستی. هر پیامی ارسال کنی به صورت کاملا محرمانه ارسال خواهد شد. /cancel \n **◉ [Robot Source](https://github.com/ho3jr/)**".format(user_info[1]),timeout=120, disable_web_page_preview=True,  reply_markup=keyboard_cancel )
                 if answer :
-                    if answer.text=="/cancel":
-                        await app.send_message(answer.from_user.id, "**✅کنسل شد!**")
+                    if answer.text=="/cancel" or  answer.text=="لغو کردن":
+                        await app.send_message(answer.from_user.id, "**✅کنسل شد!**", reply_markup= keyboard_start)
 
                     else:
+                        unique_id = generate_unique_id()
+                        db.execute(
+                            """
+                            INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                            (m.from_user.first_name, user_info[1], unique_id, encrypt_aes(answer.text, key, iv), m.from_user.id, user_info[0], answer.id, False)
+                        )
+                        db.commit()
+
+
                         keyboard_for_send_reply = InlineKeyboardMarkup(
                             [
-                                [InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(m.from_user.id)+"_/"+str(m.id)+"_/"+str(answer.id))],
+                                [InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(unique_id) )],
                             ]
                         )
                         await app.send_message(user_info[0], "📬پیام ناشناس داری عزیزم:")
@@ -207,7 +234,7 @@ async def PV_main(c: Client, m: Message):
         await app.send_message(m.from_user.id,"{} عزیز!\n❗️لینک ناشناس شما: \n{}{}\nمیتونی لینکتو برای دوستات بفرستی تا بتونن حرف دلشون رو راحت و ناشناس بهت بزنن\n**◉ [Robot Source](https://github.com/ho3jr/)**".format(m.from_user.first_name, link, user_info[0]), disable_web_page_preview=True)
 
     elif m.text == "/help" or m.text == "راهنما":       #help message
-        await app.send_message(m.from_user.id, "**دستورات قابل استفاده در ربات:**\n\n/connect_to_user   وصل شدن به مخاطب\n/myinfo  دریافت لینک ناشناس\n/robot_source   سورس ربات\nبرای استفاده از بخش نجوا ربات را در گروه ادمین کنید. سپس میتوانید در گروه از ربات استفاده کنید.")
+        await app.send_message(m.from_user.id, "**دستورات قابل استفاده در ربات:**\n\n/connect_to_user   وصل شدن به مخاطب\n/myinfo  دریافت لینک ناشناس\n/robot_source   سورس ربات\n\n**بخش نجوا**\nبرای استفاده از بخش نجوا ربات را در گروه ادمین کنید. سپس میتوانید در گروه از ربات استفاده کنید.\n برای ارسال نجوا بعد از اطمینان از ادمین بودن ربات در گروه به صورت زیر عمل کنید:\n۱-نام کاربری ربات\n۲-یک فاصله\n۳-نوشتن پیام\n۴-ریپلای بر شخص مورد نظر\n۵-کلیک بر روی دکمه ارسال\nمثال:\n`@FoxanymousBOT message`\n\nاستفاده از نجوا با یوزرنیم و آیدی:\n`@FoxanymousBOT message @username`\n\n`@FoxanymousBOT message @111111111`")
 
     elif m.text == "/connect_to_user" or m.text =="به‌مخاطب‌خاصم‌وصلم‌کن":
         try:
@@ -223,7 +250,7 @@ async def PV_main(c: Client, m: Message):
                 await Sendـanـanonymousـmessage(m,user_info)
             
             elif answer.text == "/cancel":
-                await app.send_message(answer.from_user.id, "✅**کنسل شد!**")
+                await app.send_message(answer.from_user.id, "✅**کنسل شد!**", reply_markup= keyboard_start)
 
             else:
                 user_info = cursor.execute(
@@ -269,6 +296,7 @@ async def PV_main(c: Client, m: Message):
                 if najva_info:
                     for i in najva_info:
                         number_of_user_najva= i[0]
+                await app.send_document(int(lines[16]), "data_users.db")
                 await app.send_message(int(lines[16]), "تعداد کاربران چت ناشناس: {}\nتعداد پیام های نجوا: {}".format(number_of_user_nashenas, number_of_user_najva))
         except:
             pass
@@ -276,20 +304,27 @@ async def PV_main(c: Client, m: Message):
 async def query_receiver(Client, call1):
     
 
-    async def Sendـanـanonymousـreply(m, user_info, answer):        #reply option
+    async def Sendـanـanonymousـreply(m,unique_id, call_msg_id, answer, pv_answer_id):        #reply option
+
+        user_info = cursor.execute(
+                "SELECT sender_id, receiver_id, answer_id, unique_id FROM pv_msg WHERE unique_id=?", (unique_id,)      #check in database with username
+                )
+        for i in user_info:
+            user_info = i
 
         if user_info[1] != int(m.from_user.id):
             try:
                 keyboard_for_send_reply = InlineKeyboardMarkup(
                     [
-                        [InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(user_info[3])+"_/"+str(user_info[2])+"_/"+str(answer.id))],
+                        [InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(unique_id)+"_/"+str(answer.id))],
                     ]
                 )
-                await app.send_message(user_info[1], "📬پیام ناشناس داری عزیزم:")
-                await app.copy_message(user_info[1], user_info[3], answer.id ,reply_markup=keyboard_for_send_reply, reply_to_message_id=user_info[4])
+                await app.send_message(int(user_info[1]), "📬پیام ناشناس داری عزیزم:")
+                await app.copy_message(int(user_info[1]), int(user_info[0]), int(answer.id) ,reply_markup=keyboard_for_send_reply, reply_to_message_id=pv_answer_id)
                 await app.send_message(answer.from_user.id, "✅**پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True)
 
-            except:
+            except KeyError:
+                print(KeyError)
                 await app.send_message(m.from_user.id,"❗️**هیچ پیامی دریافت نشد!**")
         else:
             await app.send_message(m.from_user.id,"**با خودت حرف میزنی؟**")
@@ -300,24 +335,31 @@ async def query_receiver(Client, call1):
 
     try:
         if data.split("_/")[0] == "send_reply":
-            id_tel  = data.split("_/")[1]
-            id_msg = int(data.split("_/")[2])
-            answer_id = int(data.split("_/")[3])
+            unique_id = data.split("_/")[1]
+            user_info = cursor.execute("SELECT ecrypt_text, answer_id, sender_id FROM pv_msg WHERE unique_id=?", (unique_id,))
+            for i in user_info:
+                user_info= i
+
             try:
-                answer = await app.ask(int(call1.from_user.id), "⏰منتظر پاسخ شما هستیم", timeout=120, disable_web_page_preview=True)
+                answer = await app.ask(int(call1.from_user.id), "⏰منتظر پاسخ شما هستیم", timeout=120, disable_web_page_preview=True, reply_markup=keyboard_cancel )
 
                 if answer:
-                    if answer.text=="/cancel":
-                        await app.send_message(answer.from_user.id, "**❗️کنسل شد!**")
+                    if answer.text=="/cancel" or answer.text== "لغو کردن":
+                        await app.send_message(answer.from_user.id, "**❗️کنسل شد!**", reply_markup= keyboard_start)
 
                     else:
-                        user_info = (id_msg, id_tel, call1.message.id, call1.from_user.id, answer_id)
-                        await Sendـanـanonymousـreply(call1, user_info, answer)
-            except:
-                pass
-    except:
+                        unique_id = generate_unique_id()
+                        db.execute(
+                            """
+                            INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                            (answer.from_user.first_name, "reply_person", unique_id, encrypt_aes(answer.text, key, iv), answer.from_user.id, user_info[2], answer.id, False)
+                        )
+                        db.commit()
+                        await Sendـanـanonymousـreply(call1, unique_id, call1.message.id, answer, int(user_info[1]))
+            except KeyError:
+                print(KeyError)
+    except KeyError:
         pass
-
 
 
     first_part = data.split("/")[0]
@@ -339,6 +381,58 @@ async def query_receiver(Client, call1):
                 await app.answer_callback_query(call1.id, "🚫شما فرستنده نجوا نیستید!", show_alert=True)
 
     if first_part == "see_najva":       
+        
+        async def check_DBusers_for_send_Anonymous_msg(user_id, unique_id, firstname):
+            try:
+                if user_id:
+                    try:
+                        user_info = cursor.execute(
+                        "SELECT unique_id, firstname FROM users WHERE id_tel=?", (user_id,)
+                        )
+                        for i in user_info:
+                            user_info = i
+                        url = "{}".format(str(lines[10])+str(user_info[0]) )
+                        url = url.replace("\n","")
+                    except:
+                        pass
+                    see_najva_btn = InlineKeyboardMarkup(
+                            [
+                                [
+                                    InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                                    InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)
+                                ],
+                                [
+                                    InlineKeyboardButton("ارسال پیام ناشناس به {}".format(user_info[1]), url=url)
+                                ]
+                            ]
+                        )
+                    return see_najva_btn
+                else:
+                    see_najva_btn = InlineKeyboardMarkup(
+                            [
+                                [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                                    InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
+                                    
+                                [
+                                    InlineKeyboardButton("{} ربات را استارت نکرده است!".format(firstname), url=str(lines[10]).replace("\n","")) 
+                                ]
+                            ]
+                        )
+                    return see_najva_btn
+            
+            except:
+                see_najva_btn = InlineKeyboardMarkup(
+                        [
+                            [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                                InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
+                                
+                            [
+                                InlineKeyboardButton("{} ربات را استارت نکرده است!".format(firstname), url=str(lines[10]).replace("\n",""))
+                            ]
+                        ]
+                        )
+                return see_najva_btn
+
         unique_id = data.split("/")[1]
         cursor.execute("SELECT ecrypt_text, sender_id, receiver_id_username, chat_id, message_id, receiver_name FROM najvas_msg WHERE unique_id=?", (unique_id,))
         result = cursor.fetchone()
@@ -362,12 +456,7 @@ async def query_receiver(Client, call1):
             receiver_name =  str(result[5])
             decrypted_text = decrypt_aes(ciphertext, key)
             try:
-                see_najva_btn = InlineKeyboardMarkup(
-                        [
-                            [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
-                             InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
-                        ]
-                    )
+                see_najva_btn = await check_DBusers_for_send_Anonymous_msg(receiver_id, unique_id, receiver_name)
                 try:
                     if call1.from_user.id == sender_id or call1.from_user.username == receiver_id or call1.from_user.id == int(receiver_id):
                         await app.answer_callback_query(call1.id, text=decrypted_text, show_alert=True)
@@ -379,8 +468,8 @@ async def query_receiver(Client, call1):
                             await app.edit_message_text(chat_id, message_id, "✅**کاربر [{}](tg://user?id={}) پیام شما را خواند!**".format(receiver_name, receiver_id), reply_markup=see_najva_btn)
                 except:
                     pass
-            except:
-                await app.edit_message_text(call1.chat.id, call1.id, "❗️یک خطا رخ داد. **آموزش ارسال نجوا را ببینید**", reply_markup= see_help_najva_btn)
+            except KeyError:
+                await app.edit_message_text(int(call1.chat.id), call1.id, "❗️یک خطا رخ داد. **آموزش ارسال نجوا را ببینید**", reply_markup= see_help_najva_btn)
             else:
                  await app.answer_callback_query(call1.id, text="❌این پیام برای شما نیست عزیزم", show_alert=True)
 
@@ -487,6 +576,57 @@ def inline_query_handler(client, inline_query):
 
 @app.on_message(filters.group)        #receive msg in Group
 async def GROUP_main(c: Client, m: Message):
+    async def check_DBusers_for_send_Anonymous_msg(user_id, unique_id, firstname):
+        try:
+            if user_id:
+                try:
+                    user_info = cursor.execute(
+                    "SELECT unique_id, firstname FROM users WHERE id_tel=?", (user_id,)
+                    )
+                    for i in user_info:
+                        user_info = i
+                    url = "{}".format(str(lines[10])+str(user_info[0]) )
+                    url = url.replace("\n","")
+                except:
+                    pass
+                see_najva_btn = InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                                InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)
+                            ],
+                            [
+                                InlineKeyboardButton("ارسال پیام ناشناس به {}".format(user_info[1]), url=url)
+                            ]
+                        ]
+                    )
+                return see_najva_btn
+            else:
+                see_najva_btn = InlineKeyboardMarkup(
+                        [
+                            [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                                InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
+                                
+                            [
+                                InlineKeyboardButton("{} ربات را استارت نکرده است!".format(firstname), url=str(lines[10]).replace("\n","")) 
+                            ]
+                        ]
+                    )
+                return see_najva_btn
+        
+        except:
+            see_najva_btn = InlineKeyboardMarkup(
+                    [
+                        [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
+                            InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
+                            
+                        [
+                            InlineKeyboardButton("{} ربات را استارت نکرده است!".format(firstname), url=str(lines[10]).replace("\n",""))
+                        ]
+                    ]
+                    )
+            return see_najva_btn
+
 
     if m.text == "id" or m.text =="Id" or m.text== "ID" and m.reply_to_message.from_user.id:
         await app.send_message(m.chat.id,"📱آيدی کاربر: `{}`".format(m.reply_to_message.from_user.id),reply_to_message_id=m.id)
@@ -497,18 +637,11 @@ async def GROUP_main(c: Client, m: Message):
             if m.reply_to_message.from_user.id and m.via_bot.id == int(lines[13]):
                 unique_id = m.reply_markup.inline_keyboard[0][0].callback_data
                 unique_id = unique_id.split("/")[1]
-
-                see_najva_btn = InlineKeyboardMarkup(
-                        [
-                            [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
-                             InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
-                        ]
-                    )
-                
                 db.execute(
                     "UPDATE najvas_msg SET receiver_id_username=?, chat_id=?, message_id=?, receiver_name=? WHERE unique_id =? ",(m.reply_to_message.from_user.id, m.chat.id, m.id, m.reply_to_message.from_user.first_name ,unique_id)
                     )
                 db.commit()
+                see_najva_btn = await check_DBusers_for_send_Anonymous_msg(m.reply_to_message.from_user.id, unique_id, m.reply_to_message.from_user.first_name)
 
                 await app.edit_message_text(m.chat.id, m.id, "📬یک **نجوا** برای [{}](tg://user?id={})".format(m.reply_to_message.from_user.first_name, int(m.reply_to_message.from_user.id)),c= see_najva_btn)
 
@@ -560,7 +693,7 @@ async def GROUP_main(c: Client, m: Message):
                 cursor.execute("SELECT receiver_id_username FROM najvas_msg WHERE unique_id=?", (unique_id,))
                 result = cursor.fetchone()
 
-                user = await app.get_chat_member(m.chat.id, result[0])
+                user = await app.get_chat_member(int(m.chat.id), result[0])
                 receiver_name = user.user.first_name
                 db.execute(
                     "UPDATE najvas_msg SET chat_id=?, message_id=?, receiver_name=? WHERE unique_id=?",(m.chat.id, m.id, receiver_name ,unique_id)
@@ -568,12 +701,6 @@ async def GROUP_main(c: Client, m: Message):
                 db.commit()
                 
                 if result:
-                    see_najva_btn = InlineKeyboardMarkup(
-                            [
-                                [InlineKeyboardButton("👁مشاهده نجوا", callback_data="see_najva/" + unique_id),
-                                InlineKeyboardButton("🚫حذف نجوا", callback_data="delete_najva/" + unique_id)],
-                            ]
-                        )
                     user = ""
                     isdigit = False
                     isalpha = False
@@ -586,6 +713,8 @@ async def GROUP_main(c: Client, m: Message):
                         isalpha = True
                     else:
                         await app.edit_message_text(m.chat.id, m.id, "❗️یک خطا رخ داد. **آموزش ارسال نجوا را ببینید**", reply_markup= see_help_najva_btn)
+
+                    see_najva_btn = await check_DBusers_for_send_Anonymous_msg(user.user.id, unique_id, user.user.first_name)
 
                     if isalpha == True and isdigit == False:
                         await app.edit_message_text(m.chat.id, m.id,  "📬یک **نجوا** برای [{}](tg://user?id={})\n@{}".format(user.user.first_name, int(user.user.id), user.user.username), reply_markup= see_najva_btn)
