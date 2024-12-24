@@ -11,8 +11,7 @@ import base64
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
-
-INFO = open('INFO.txt', 'r')
+INFO = open("INFO.txt", 'r')
 lines = INFO.readlines()
 
 
@@ -35,7 +34,8 @@ db.execute(
         firstname VARCHAR(30),
         lastname VARCHAR(30),
         username VARCHAR(30),
-        unique_id VARCHAR(15)
+        unique_id VARCHAR(15),
+        blocklist VARCHAR(5000)
         )"""
 )
 cursor = db.cursor()
@@ -69,23 +69,31 @@ db.execute(
 )
 db.commit()
 
-button1 = KeyboardButton("لینک من")
-button2 = KeyboardButton("به‌مخاطب‌خاصم‌وصلم‌کن")
-button3 = KeyboardButton("راهنما")
-button4 = KeyboardButton("سورس‌ربات | درباره‌ربات")
-button5 = KeyboardButton("چنل ")
+button1 = KeyboardButton("🔗لینک من")
+button2 = KeyboardButton("📝به‌مخاطب‌خاصم‌وصلم‌کن")
+button3 = KeyboardButton("❓راهنما")
+button4 = KeyboardButton("🤖درباره ربات")
+button5 = KeyboardButton("📣چنل")
+button6 = KeyboardButton("👤اکانت من")
 
-button6 = KeyboardButton("لغو کردن")
+button7 = KeyboardButton("لغو کردن")
     
 
-keyboard_start = ReplyKeyboardMarkup([[button1, button2], [button3, button4], [button5]], resize_keyboard=True)
-keyboard_cancel = ReplyKeyboardMarkup([[button6]], resize_keyboard=True)
+keyboard_start = ReplyKeyboardMarkup([[button1, button2], [button3, button4, button5], [button6]], resize_keyboard=True)
+keyboard_cancel = ReplyKeyboardMarkup([[button7]], resize_keyboard=True)
 
+               
 see_help_najva_btn = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton("آموزش ارسال نجوا", callback_data="see_help_najva")],
     ]
 )
+
+user_pannel_keyboard = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("🗑پاکسازی بلاک لیست", callback_data="reset_block_list/")]
+            ]
+        )
 
 learn_how_to_recive_id_group = InlineKeyboardMarkup(
     [
@@ -143,39 +151,55 @@ def generate_unique_id():      #generate unique id
     password = ''.join(random.choice(characters) for i in range(12))
     return password 
 
+async def check_blocklist(sender_id, reciever_id):
+    cursor.execute("SELECT blocklist FROM users WHERE id_tel=?", (int(reciever_id),))
+    blocklist = cursor.fetchone()
+    try:
+        data_list = [int(item) for item in blocklist[0].split('/') if item]
+        if sender_id in data_list:
+            return False
+        else:
+            return True
+    except:
+        return True
 
 @app.on_message(filters.private)        #receive msg in PV
 async def PV_main(c: Client, m: Message):
 
     async def Sendـanـanonymousـmessage(m, user_info):
         if user_info[0] != int(m.from_user.id):
-            try:
-                answer = await app.ask(int(m.from_user.id), "📤در حال ارسال پیام ناشناس به **{}** هستی. هر پیامی ارسال کنی به صورت کاملا محرمانه ارسال خواهد شد. /cancel \n **◉ [Robot Source](https://github.com/ho3jr/)**".format(user_info[1]),timeout=120, disable_web_page_preview=True,  reply_markup=keyboard_cancel )
-                if answer :
-                    if answer.text=="/cancel" or  answer.text=="لغو کردن":
-                        await app.send_message(answer.from_user.id, "**✅کنسل شد!**", reply_markup= keyboard_start)
+            if await check_blocklist(m.from_user.id, user_info[0]):
 
-                    else:
-                        unique_id = generate_unique_id()
-                        db.execute(
-                            """
-                            INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
-                            (m.from_user.first_name, user_info[1], unique_id, encrypt_aes(answer.text, key, iv), m.from_user.id, user_info[0], answer.id, False)
-                        )
-                        db.commit()
+                try:
+                    answer = await app.ask(int(m.from_user.id), "📤در حال ارسال پیام ناشناس به **{}** هستی. هر پیامی ارسال کنی به صورت کاملا محرمانه ارسال خواهد شد. /cancel \n **◉ [Robot Source](https://github.com/ho3jr/)**".format(user_info[1]),timeout=120, disable_web_page_preview=True,  reply_markup=keyboard_cancel )
+                    if answer :
+                        if answer.text=="/cancel" or  answer.text=="لغو کردن":
+                            await app.send_message(answer.from_user.id, "**✅کنسل شد!**", reply_markup= keyboard_start)
+
+                        else:
+                            unique_id = generate_unique_id()
+                            db.execute(
+                                """
+                                INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                (m.from_user.first_name, user_info[1], unique_id, encrypt_aes(answer.text, key, iv), m.from_user.id, user_info[0], answer.id, False)
+                            )
+                            db.commit()
 
 
-                        keyboard_for_send_reply = InlineKeyboardMarkup(
-                            [
-                                [InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(unique_id) )],
-                            ]
-                        )
-                        await app.send_message(user_info[0], "📬پیام ناشناس داری عزیزم:")
-                        await app.copy_message(user_info[0], answer.from_user.id, answer.id, reply_markup=keyboard_for_send_reply, )
-                        await app.send_message(answer.from_user.id, "**✅پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True)
+                            keyboard_for_send_reply = InlineKeyboardMarkup(
+                                [
+                                    [InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(unique_id) )],
+                                    [InlineKeyboardButton("🔒بلاک", callback_data="block_/"+str(unique_id))]
+                                ]
+                            )
+                            await app.send_message(user_info[0], "📬پیام ناشناس داری عزیزم:")
+                            await app.copy_message(user_info[0], answer.from_user.id, answer.id, reply_markup=keyboard_for_send_reply, )
+                            await app.send_message(answer.from_user.id, "**✅پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True, reply_markup=keyboard_start)
 
-            except:
-                await app.send_message(m.from_user.id,"**❗️هیچ پیامی دریافت نشد!**")
+                except:
+                    await app.send_message(m.from_user.id,"**❗️هیچ پیامی دریافت نشد!**")
+            else:
+                await app.send_message(m.from_user.id,"**🤨شما بلاک شده اید!**")
         else:
             await app.send_message(m.from_user.id,"**با خودت حرف میزنی؟**")
 
@@ -222,10 +246,10 @@ async def PV_main(c: Client, m: Message):
     if m.text == "/start":      #start message
         await app.send_message(m.from_user.id,"به ربات فاکسانیموس خوش اومدی😘\nمیتوانید از دستور /help برای راهنمایی استفاده کنید.", reply_markup=keyboard_start, disable_web_page_preview=True)
 
-    elif m.text == "چنل":
+    elif m.text == "📣چنل":
          await app.send_message(m.from_user.id,"📢برای عضو شدن در چنل اصلی ربات جهت خبر دار شدن از اخبار و اپدیت های ربات بر روی دکمه زیر کلیک کنید.", reply_markup=channel_link_button)
 
-    elif m.text == "/myinfo" or m.text == "لینک من":       #send user link 
+    elif m.text == "/myinfo" or m.text == "🔗لینک من":       #send user link 
         user_info = cursor.execute(
             "SELECT unique_id FROM users WHERE id_tel=?", (m.from_user.id,)
             )
@@ -233,10 +257,10 @@ async def PV_main(c: Client, m: Message):
             user_info = i
         await app.send_message(m.from_user.id,"{} عزیز!\n❗️لینک ناشناس شما: \n{}{}\nمیتونی لینکتو برای دوستات بفرستی تا بتونن حرف دلشون رو راحت و ناشناس بهت بزنن\n**◉ [Robot Source](https://github.com/ho3jr/)**".format(m.from_user.first_name, link, user_info[0]), disable_web_page_preview=True)
 
-    elif m.text == "/help" or m.text == "راهنما":       #help message
+    elif m.text == "/help" or m.text == "❓راهنما":       #help message
         await app.send_message(m.from_user.id, "**دستورات قابل استفاده در ربات:**\n\n/connect_to_user   وصل شدن به مخاطب\n/myinfo  دریافت لینک ناشناس\n/robot_source   سورس ربات\n\n**بخش نجوا**\nبرای استفاده از بخش نجوا ربات را در گروه ادمین کنید. سپس میتوانید در گروه از ربات استفاده کنید.\n برای ارسال نجوا بعد از اطمینان از ادمین بودن ربات در گروه به صورت زیر عمل کنید:\n۱-نام کاربری ربات\n۲-یک فاصله\n۳-نوشتن پیام\n۴-ریپلای بر شخص مورد نظر\n۵-کلیک بر روی دکمه ارسال\nمثال:\n`@FoxanymousBOT message`\n\nاستفاده از نجوا با یوزرنیم و آیدی:\n`@FoxanymousBOT message @username`\n\n`@FoxanymousBOT message @111111111`")
 
-    elif m.text == "/connect_to_user" or m.text =="به‌مخاطب‌خاصم‌وصلم‌کن":
+    elif m.text == "/connect_to_user" or m.text =="📝به‌مخاطب‌خاصم‌وصلم‌کن":
         try:
             answer = await app.ask(int(m.from_user.id), "📱یوزرنیم مخاطب**(بدون @)** یا آیدی عددی مخاطب مورد نظر را ارسال کنید./cancel\n**◉ [Robot Source](https://github.com/ho3jr/)**", timeout=120, disable_web_page_preview=True, reply_markup=learn_how_to_recive_id_group)
 
@@ -266,7 +290,7 @@ async def PV_main(c: Client, m: Message):
             await app.send_message(m.from_user.id, "👤❗️**کاربر ربات رو استارت نزده.** شاید بتونی لینک ناشناس خودتو بهش بدی تا ربات رو استارت بزنه؟\n/myinfo")
 
 
-    elif m.text == "سورس‌ربات | درباره‌ربات" or m.text =="/robot_source":       #send robot source
+    elif m.text == "🤖درباره ربات" or m.text =="/robot_source":       #send robot source
         await app.send_message(m.from_user.id, "ربات فاکسامینوس به صورت کاملا اوپن سورس منتشر شده است و تمام توسعه دهندگان و برنامه نویسان میتوانند از این ربات استفاده کنند و آن را توسعه بدهند. از ویژگی های این ربات، میتوان به **حفظ حریم خصوصی** افراد اشاره کرد. این ربات اطلاعات و پیام های کاربران در هیچ کجا ذخیره نمیکند و به هیچ وجه ادمین به پیام های شما دسترسی ندارد. \n**این ربات به زبان پایتون و با کتابخانه pyrogram نوشته شده است!**\n\nعلاقه مندان به توسعه و استفاده از سورس ربات میتوانند از لینک زیر عمل کنند:\n**◉ [Robot Source](https://github.com/ho3jr/Foxanymous-BOT)**\nسازنده ربات: https://t.me/NaGHiZam")
 
 
@@ -281,28 +305,120 @@ async def PV_main(c: Client, m: Message):
         try:
             number_of_user_nashenas = 0
             number_of_user_najva = 0
+            number_of_pv_msg = 0
             if m.from_user.id == int(lines[16]):
-                nashenas_info = cursor.execute(
+
+                cursor.execute(
                     "SELECT id_db FROM users ORDER BY id_db DESC LIMIT 1"  # چک کردن در پایگاه داده با نام کاربری
                 )
-                if nashenas_info:
-                    for i in nashenas_info:
-                        number_of_user_nashenas= i[0]
+                number_of_user_nashenas = cursor.fetchone()
 
 
-                najva_info = cursor.execute(
-                    "SELECT id_db FROM najvas_msg ORDER BY id_db DESC LIMIT 1"  # چک کردن در پایگاه داده با نام کاربری
+                cursor.execute("SELECT COUNT(*) FROM najvas_msg WHERE chat_id != ?", (1, ))
+                number_of_user_najva = cursor.fetchone()
+
+
+                cursor.execute(
+                    "SELECT id_db FROM pv_msg ORDER BY id_db DESC LIMIT 1"  # چک کردن در پایگاه داده با نام کاربری
                 )
-                if najva_info:
-                    for i in najva_info:
-                        number_of_user_najva= i[0]
+                number_of_pv_msg = cursor.fetchone()
+
                 await app.send_document(int(lines[16]), "data_users.db")
-                await app.send_message(int(lines[16]), "تعداد کاربران چت ناشناس: {}\nتعداد پیام های نجوا: {}".format(number_of_user_nashenas, number_of_user_najva))
-        except:
-            pass
+                await app.send_message(int(lines[16]), "تعداد کاربران چت ناشناس: {}\nتعداد پیام های نجوا: {}\nتعداد پیام ناشناس ارسال شده:{}".format(number_of_user_nashenas[0] if number_of_user_nashenas != None else number_of_user_nashenas , number_of_user_najva[0] if number_of_user_najva != None else number_of_user_najva, number_of_pv_msg[0] if number_of_pv_msg != None else number_of_pv_msg))
+        except KeyError:
+            print(KeyError)
+
+    elif m.text == "/send_message":
+        try:
+            if m.from_user.id == int(lines[16]):
+                yes_no_keyboard = InlineKeyboardMarkup(
+                        [
+                            [InlineKeyboardButton("✅بله", callback_data="send_message_to_users/"), 
+                             InlineKeyboardButton ("❌نه", callback_data="no_send_message_to_users/")]
+                        ]
+                    )
+                await app.send_message( m.chat.id, "برای کاربران ربات پیام ارسال شود؟", reply_markup=yes_no_keyboard)
+        except KeyError:
+            print(KeyError)
+
+
+    elif m.text == "👤اکانت من":
+        try:
+            cursor.execute("SELECT COUNT(*) FROM pv_msg WHERE sender_id = ?", (m.from_user.id,))
+            send_pv_msg_count = cursor.fetchone()[0]  
+            cursor.execute("SELECT COUNT(*) FROM pv_msg WHERE receiver_id = ?", (m.from_user.id,))
+            receive_pv_msg_count = cursor.fetchone()[0]  
+            cursor.execute("SELECT COUNT(*) FROM najvas_msg WHERE sender_id = ? AND chat_id != ?", (m.from_user.id, 1))
+            najvas_msg_count = cursor.fetchone()[0] 
+
+            send_pv_msg_count = send_pv_msg_count if send_pv_msg_count is not None else 0
+            receive_pv_msg_count = receive_pv_msg_count if receive_pv_msg_count is not None else 0
+            najvas_msg_count = najvas_msg_count if najvas_msg_count is not None else 0
+
+            username = m.from_user.username if m.from_user.username else "ندارد"
+
+            first_name = m.from_user.first_name if m.from_user.first_name else "نام ندارد"
+            last_name = m.from_user.last_name if m.from_user.last_name else ""
+
+            language_code = m.from_user.language_code if m.from_user.language_code else "زبان ندارد"
+
+            await app.send_message(m.chat.id, "نام شما: {} {}\nآیدی عددی شما‍‍: `{}`\nنام کاربری شما: @{}\nزبان تلگرام شما: {}\nلینک شما: /myinfo\nتعداد پیام های ارسال شده ناشناس: {}\nتعداد پیام های دریافت شده: {}\nتعداد نجوا های ارسال شده: {}"
+                                .format(first_name, last_name, m.from_user.id, username, language_code, send_pv_msg_count, receive_pv_msg_count, najvas_msg_count), reply_markup= user_pannel_keyboard)
+
+        except KeyError:
+            print(KeyError)
+
 @app.on_callback_query()        #receive query
 async def query_receiver(Client, call1):
+
+    async def blocker(call1, data):
+        cursor.execute("SELECT sender_id, receiver_id FROM pv_msg WHERE unique_id=?", (str(data.split("_/")[1]),))
+        ids = cursor.fetchone()
+        cursor.execute("SELECT blocklist FROM users WHERE id_tel=?", (call1.from_user.id, ))
+        blocklist = cursor.fetchone()
+        unblock_btn = InlineKeyboardMarkup(
+                    [
+                        [InlineKeyboardButton("🔓آنبلاک", callback_data="unblock_/"+str(data.split("_/")[1]))],
+                    ]
+                )
+        if blocklist[0] == None or blocklist[0] == "":
+            blocklist_new = str(ids[0])+"/" if call1.from_user.id == int(ids[1]) else str(ids[1])+"/" 
+            db.execute("UPDATE users SET blocklist=? WHERE id_tel =? ",(blocklist_new, call1.from_user.id))
+            db.commit()
+            await app.answer_callback_query(call1.id, text="✅کاربر بلاک شد", show_alert=True)
+            await app.edit_message_reply_markup(call1.message.chat.id, call1.message.id, reply_markup=unblock_btn)
+        else:
+            data_list = [int(item) for item in blocklist[0].split('/') if item]
+            if int(ids[0]) in data_list or int(ids[1]) in data_list:
+                await app.answer_callback_query(call1.id, text="❌کاربر از قبل بلاک شده بود", show_alert=True)
+                await app.edit_message_reply_markup(call1.message.chat.id, call1.message.id, reply_markup=unblock_btn)
+            else:
+                blocklist_new = str(blocklist[0]) + str(ids[0])+"/" if call1.from_user.id == ids[1] else str(blocklist[0]) + str(ids[1])+"/"
+                db.execute("UPDATE users SET blocklist=? WHERE id_tel =? ",(blocklist_new, call1.from_user.id))
+                db.commit()
+                await app.answer_callback_query(call1.id, text="✅کاربر بلاک شد", show_alert=True)
+                await app.edit_message_reply_markup(call1.message.chat.id, call1.message.id, reply_markup=unblock_btn)
     
+    async def unblocker(call1, data):
+        cursor.execute("SELECT sender_id, receiver_id FROM pv_msg WHERE unique_id=?", (str(data.split("_/")[1]),))
+        ids = cursor.fetchone()
+        cursor.execute("SELECT blocklist FROM users WHERE id_tel=?", (call1.from_user.id, ))
+        blocklist = cursor.fetchone()
+        data_list = [int(item) for item in blocklist[0].split('/') if item]
+        block_btn = InlineKeyboardMarkup(
+                    [
+                        [InlineKeyboardButton("🔒بلاک", callback_data="block_/"+str(data.split("_/")[1]))]
+                    ]
+                )
+        if int(ids[0]) in data_list or int(ids[1]) in data_list:
+            blocklist_new = blocklist[0].replace("{}".format(str(ids[0])+"/"), "") if call1.from_user.id == int(ids[1]) else blocklist[0].replace("{}".format(str(ids[1])+"/"), "") 
+            db.execute("UPDATE users SET blocklist=? WHERE id_tel =? ",(blocklist_new, call1.from_user.id))
+            db.commit()
+            await app.answer_callback_query(call1.id, text="✅کاربر آنبلاک شد", show_alert=True)
+            await app.edit_message_reply_markup(call1.message.chat.id, call1.message.id, reply_markup=block_btn)
+        else:
+            await app.answer_callback_query(call1.id, text="❌کاربر در بلاک لیست شما وجود نداشت", show_alert=True)
+            await app.edit_message_reply_markup(call1.message.chat.id, call1.message.id, reply_markup=block_btn)
 
     async def Sendـanـanonymousـreply(m,unique_id, call_msg_id, answer, pv_answer_id):        #reply option
 
@@ -317,11 +433,12 @@ async def query_receiver(Client, call1):
                 keyboard_for_send_reply = InlineKeyboardMarkup(
                     [
                         [InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(unique_id)+"_/"+str(answer.id))],
+                        [InlineKeyboardButton("🔒بلاک", callback_data="block_/"+str(data.split("_/")[1]))]
                     ]
                 )
                 await app.send_message(int(user_info[1]), "📬پیام ناشناس داری عزیزم:")
                 await app.copy_message(int(user_info[1]), int(user_info[0]), int(answer.id) ,reply_markup=keyboard_for_send_reply, reply_to_message_id=pv_answer_id)
-                await app.send_message(answer.from_user.id, "✅**پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True)
+                await app.send_message(answer.from_user.id, "✅**پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True, reply_markup=keyboard_start)
 
             except KeyError:
                 print(KeyError)
@@ -336,26 +453,30 @@ async def query_receiver(Client, call1):
     try:
         if data.split("_/")[0] == "send_reply":
             unique_id = data.split("_/")[1]
-            user_info = cursor.execute("SELECT ecrypt_text, answer_id, sender_id FROM pv_msg WHERE unique_id=?", (unique_id,))
+            user_info = cursor.execute("SELECT ecrypt_text, answer_id, sender_id, receiver_id FROM pv_msg WHERE unique_id=?", (unique_id,))
             for i in user_info:
                 user_info= i
 
             try:
-                answer = await app.ask(int(call1.from_user.id), "⏰منتظر پاسخ شما هستیم", timeout=120, disable_web_page_preview=True, reply_markup=keyboard_cancel )
+                if await check_blocklist(int(user_info[2]), int(user_info[3])) if call1.from_user.id == int(user_info[2]) else await check_blocklist(int(user_info[3]), int(user_info[2])):
+                    answer = await app.ask(int(call1.from_user.id), "⏰منتظر پاسخ شما هستیم", timeout=120, disable_web_page_preview=True, reply_markup=keyboard_cancel )
 
-                if answer:
-                    if answer.text=="/cancel" or answer.text== "لغو کردن":
-                        await app.send_message(answer.from_user.id, "**❗️کنسل شد!**", reply_markup= keyboard_start)
+                    if answer:
+                        if answer.text=="/cancel" or answer.text== "لغو کردن":
+                            await app.send_message(answer.from_user.id, "**❗️کنسل شد!**", reply_markup= keyboard_start)
 
-                    else:
-                        unique_id = generate_unique_id()
-                        db.execute(
-                            """
-                            INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
-                            (answer.from_user.first_name, "reply_person", unique_id, encrypt_aes(answer.text, key, iv), answer.from_user.id, user_info[2], answer.id, False)
-                        )
-                        db.commit()
-                        await Sendـanـanonymousـreply(call1, unique_id, call1.message.id, answer, int(user_info[1]))
+                        else:
+                            unique_id = generate_unique_id()
+                            db.execute(
+                                """
+                                INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                (answer.from_user.first_name, "reply_person", unique_id, encrypt_aes(answer.text, key, iv), answer.from_user.id, user_info[2], answer.id, False)
+                            )
+                            db.commit()
+                            await Sendـanـanonymousـreply(call1, unique_id, call1.message.id, answer, int(user_info[1]))
+                else:
+                    await app.send_message(call1.from_user.id,"**🤨شما بلاک شده اید!**", reply_to_message_id=call1.message.id)
+
             except KeyError:
                 print(KeyError)
     except KeyError:
@@ -380,7 +501,7 @@ async def query_receiver(Client, call1):
             else:
                 await app.answer_callback_query(call1.id, "🚫شما فرستنده نجوا نیستید!", show_alert=True)
 
-    if first_part == "see_najva":       
+    elif first_part == "see_najva":       
         
         async def check_DBusers_for_send_Anonymous_msg(user_id, unique_id, firstname):
             try:
@@ -471,10 +592,31 @@ async def query_receiver(Client, call1):
             except KeyError:
                 await app.edit_message_text(int(call1.chat.id), call1.id, "❗️یک خطا رخ داد. **آموزش ارسال نجوا را ببینید**", reply_markup= see_help_najva_btn)
             else:
-                 await app.answer_callback_query(call1.id, text="❌این پیام برای شما نیست عزیزم", show_alert=True)
+                await app.answer_callback_query(call1.id, text="❌این پیام برای شما نیست عزیزم", show_alert=True)
 
-    if data == "see_help_najva":
+    elif data == "see_help_najva":
         await app.answer_callback_query(call1.id, text= "برای ارسال نجوا بعد از اطمینان از ادمین بودن ربات در گروه به صورت زیر عمل کنید:\n۱-نام کاربری ربات\n۲-یک فاصله\n۳-نوشتن پیام\n۴-ریپلای بر شخص مورد نظر\n۵-کلیک بر روی دکمه ارسال", show_alert=True)
+
+    elif data.split("_/")[0] == "block":
+        await blocker(call1, data)
+    
+    elif data.split("_/")[0] == "unblock":
+        await unblocker(call1, data)
+    
+    elif first_part == "send_message_to_users":
+        if call1.from_user.id == int(lines[16]):
+            result = await app.ask(call1.message.chat.id, "💬پیامی که قصد ارسال آن به کاربران دارید را ارسال کنید!\n زمان انتظار ۱ دقیقه⏰...")
+            if result:
+               cursor.execute("SELECT id_tel FROM users")
+               for i in cursor.fetchall():
+                    await app.send_message(int(i[0]), "این یک پیام از طرف ادمین ربات است:")
+                    await app.copy_message(int(i[0]), result.chat.id, result.id)
+
+            await app.send_message(result.chat.id, "**✅پیام شما با موفقیت به کاربران ربات ارسال شد!**")
+
+    elif first_part == "reset_block_list":
+        db.execute("UPDATE users SET blocklist=? WHERE id_tel =? ",("", call1.from_user.id))
+        await app.answer_callback_query(call1.id, text="✅با موفقیت ریست شد!", show_alert=True)
 
 @app.on_inline_query()
 def inline_query_handler(client, inline_query):
