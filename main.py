@@ -201,7 +201,7 @@ async def start(c:Client, m:Message):
                 await app.send_document(int(lines[16]), "data_users.db")
                 await app.send_message(int(lines[16]), "تعداد کاربران چت ناشناس: {}\nتعداد پیام های نجوا: {}\nتعداد پیام ناشناس ارسال شده:{}".format(number_of_user_nashenas[0] if number_of_user_nashenas != None else number_of_user_nashenas , number_of_user_najva[0] if number_of_user_najva != None else number_of_user_najva, number_of_pv_msg[0] if number_of_pv_msg != None else number_of_pv_msg))
         except KeyError:
-            print(KeyError)
+            pass
 
 @app.on_message(filters.command("send_message") & filters.private)
 async def start(c:Client, m:Message):
@@ -215,7 +215,7 @@ async def start(c:Client, m:Message):
                 )
             await app.send_message( m.chat.id, "برای کاربران ربات پیام ارسال شود؟", reply_markup=yes_no_keyboard)
     except KeyError:
-        print(KeyError)
+        pass
     
 
 @app.on_message(filters.private)        #receive msg in PV
@@ -256,6 +256,50 @@ async def PV_main(c: Client, m: Message):
                                 await app.copy_message(user_info[0], answer.from_user.id, answer.id, reply_markup=keyboard_for_send_reply, )
                                 await app.send_message(answer.from_user.id, "**✅پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True, reply_markup=keyboard_start)
                             
+                            elif answer.photo:
+                                db.execute(
+                                    """
+                                    INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                    (m.from_user.first_name, user_info[1], unique_id, "Photo", m.from_user.id, user_info[0], answer.id, False)
+                                )
+                                db.commit()
+
+
+                                keyboard_for_send_reply = InlineKeyboardMarkup(
+                                    [
+                                        [
+                                            InlineKeyboardButton("🔒بلاک", callback_data="block_/"+str(unique_id)),
+                                            InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(unique_id))
+                                        ]
+
+                                    ]
+                                )
+                                await app.send_message(user_info[0], "📬پیام ناشناس داری عزیزم:")
+                                await app.copy_message(user_info[0], answer.from_user.id, answer.id, reply_markup=keyboard_for_send_reply, )
+                                await app.send_message(answer.from_user.id, "**✅پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True, reply_markup=keyboard_start)
+                       
+                            elif answer.video:
+                                db.execute(
+                                    """
+                                    INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                    (m.from_user.first_name, user_info[1], unique_id, "Video", m.from_user.id, user_info[0], answer.id, False)
+                                )
+                                db.commit()
+
+
+                                keyboard_for_send_reply = InlineKeyboardMarkup(
+                                    [
+                                        [
+                                            InlineKeyboardButton("🔒بلاک", callback_data="block_/"+str(unique_id)),
+                                            InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(unique_id))
+                                        ]
+
+                                    ]
+                                )
+                                await app.send_message(user_info[0], "📬پیام ناشناس داری عزیزم:")
+                                await app.copy_message(user_info[0], answer.from_user.id, answer.id, reply_markup=keyboard_for_send_reply, )
+                                await app.send_message(answer.from_user.id, "**✅پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True, reply_markup=keyboard_start)
+                       
                             elif answer.animation:
                                 db.execute(
                                     """
@@ -299,6 +343,51 @@ async def PV_main(c: Client, m: Message):
                                 await app.send_message(user_info[0], "📬پیام ناشناس داری عزیزم:")
                                 await app.copy_message(user_info[0], answer.from_user.id, answer.id, reply_markup=keyboard_for_send_reply, )
                                 await app.send_message(answer.from_user.id, "**✅پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True, reply_markup=keyboard_start)
+            
+                            elif answer.video_note:
+                                db.execute(
+                                    """
+                                    INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                    (m.from_user.first_name, user_info[1], unique_id, "Video_Note", m.from_user.id, user_info[0], answer.id, False)
+                                )
+                                db.commit()
+
+
+                                keyboard_for_send_reply = InlineKeyboardMarkup(
+                                    [
+                                        [
+                                            InlineKeyboardButton("🔒بلاک", callback_data="block_/"+str(unique_id)),
+                                            InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(unique_id))
+                                        ]
+
+                                    ]
+                                )
+                                await app.send_message(user_info[0], "📬پیام ناشناس داری عزیزم:")
+                                await app.copy_message(user_info[0], answer.from_user.id, answer.id, reply_markup=keyboard_for_send_reply, )
+                                await app.send_message(answer.from_user.id, "**✅پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True, reply_markup=keyboard_start)
+            
+                            elif answer.voice:
+                                db.execute(
+                                    """
+                                    INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                    (m.from_user.first_name, user_info[1], unique_id, "Voice", m.from_user.id, user_info[0], answer.id, False)
+                                )
+                                db.commit()
+
+
+                                keyboard_for_send_reply = InlineKeyboardMarkup(
+                                    [
+                                        [
+                                            InlineKeyboardButton("🔒بلاک", callback_data="block_/"+str(unique_id)),
+                                            InlineKeyboardButton("🔁پاسخ", callback_data="send_reply_/"+ str(unique_id))
+                                        ]
+
+                                    ]
+                                )
+                                await app.send_message(user_info[0], "📬پیام ناشناس داری عزیزم:")
+                                await app.copy_message(user_info[0], answer.from_user.id, answer.id, reply_markup=keyboard_for_send_reply, )
+                                await app.send_message(answer.from_user.id, "**✅پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True, reply_markup=keyboard_start)
+            
 
                 except:
                     await app.send_message(m.from_user.id,"**❗️هیچ پیامی دریافت نشد!**")
@@ -425,13 +514,12 @@ async def PV_main(c: Client, m: Message):
                                 .format(first_name, last_name, m.from_user.id, username, language_code, send_pv_msg_count, receive_pv_msg_count, najvas_msg_count), reply_markup= user_pannel_keyboard)
 
         except KeyError:
-            print(KeyError)
+            pass
 
 @app.on_callback_query()        #receive query
 async def query_receiver(Client, call1):
 
     async def blocker(call1, data):
-        print(call1)
         answer = await app.ask(int(call1.from_user.id), "قصد بلاک کردن کاربر را دارید؟ برای تایید اقدام ‍‍/y را ارسال کنید.\n در غیر این صورت /cancel را ارسال کنید", timeout=60)
         if answer.text == "/y":
             cursor.execute("SELECT sender_id, receiver_id FROM pv_msg WHERE unique_id=?", (str(data.split("_/")[1]),))
@@ -508,7 +596,7 @@ async def query_receiver(Client, call1):
                 await app.send_message(answer.from_user.id, "✅**پیام با موفقیت ارسال شد!**\n **◉ [Robot Source](https://github.com/ho3jr/)**", reply_to_message_id= answer.id, disable_web_page_preview=True, reply_markup=keyboard_start)
 
             except KeyError:
-                print(KeyError)
+                pass
                 await app.send_message(m.from_user.id,"❗️**هیچ پیامی دریافت نشد!**")
         else:
             await app.send_message(m.from_user.id,"**با خودت حرف میزنی؟**")
@@ -543,6 +631,39 @@ async def query_receiver(Client, call1):
                                 db.commit()
                                 await Sendـanـanonymousـreply(call1, unique_id, call1.message.id, answer, int(user_info[1]))
 
+                            elif answer.video:
+                                db.execute(
+                                    """
+                                    INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                    (answer.from_user.first_name, "reply_person", unique_id, "Video", answer.from_user.id, user_info[2], answer.id, False)
+                                )
+                                db.commit()
+                                await Sendـanـanonymousـreply(call1, unique_id, call1.message.id, answer, int(user_info[1]))
+
+                            elif answer.voice:
+                                db.execute(
+                                    """
+                                    INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                    (answer.from_user.first_name, "reply_person", unique_id, "Voice", answer.from_user.id, user_info[2], answer.id, False)
+                                )
+                                db.commit()
+                                await Sendـanـanonymousـreply(call1, unique_id, call1.message.id, answer, int(user_info[1]))
+                            elif answer.photo:
+                                db.execute(
+                                    """
+                                    INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                    (answer.from_user.first_name, "reply_person", unique_id, "Photo", answer.from_user.id, user_info[2], answer.id, False)
+                                )
+                                db.commit()
+                                await Sendـanـanonymousـreply(call1, unique_id, call1.message.id, answer, int(user_info[1]))
+                            elif answer.video_note:
+                                db.execute(
+                                    """
+                                    INSERT INTO pv_msg(sender_name, receiver_name, unique_id, ecrypt_text, sender_id, receiver_id, answer_id, readed) VALUES(?,?,?,?,?,?,?,?)""",
+                                    (answer.from_user.first_name, "reply_person", unique_id, "Video_Note", answer.from_user.id, user_info[2], answer.id, False)
+                                )
+                                db.commit()
+                                await Sendـanـanonymousـreply(call1, unique_id, call1.message.id, answer, int(user_info[1]))
                             elif answer.sticker:
                                 db.execute(
                                     """
@@ -564,7 +685,7 @@ async def query_receiver(Client, call1):
                     await app.send_message(call1.from_user.id,"**🤨شما بلاک شده اید!**", reply_to_message_id=call1.message.id)
 
             except KeyError:
-                print(KeyError)
+                pass
     except KeyError:
         pass
 
